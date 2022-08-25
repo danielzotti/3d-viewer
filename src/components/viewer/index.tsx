@@ -1,7 +1,7 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {
   AmbientLight, Box3,
-  Color, DirectionalLight, DoubleSide, Mesh, MeshBasicMaterial, MeshStandardMaterial,
+  Color, DirectionalLight, DoubleSide, Event, Mesh, MeshBasicMaterial, MeshStandardMaterial,
   Object3D,
   PerspectiveCamera, PlaneGeometry,
   PointLight, Renderer,
@@ -11,6 +11,7 @@ import {
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import './index.scss';
 import { createSignal } from 'solid-js';
+import { Projector } from 'three/examples/jsm/renderers/Projector';
 
 interface ViewerProps {
   title: string;
@@ -25,15 +26,27 @@ export const Viewer = ({ title, modelUrl }: ViewerProps) => {
     const [controls] = createSignal<OrbitControls>(new OrbitControls(camera(), renderer().domElement));
     const [model, setModel] = createSignal<Object3D>();
 
+    const projector = new Projector();
+
     function animate() {
       renderer().render(scene(), camera());
       requestAnimationFrame(animate);
       // console.log(camera().position)
     }
 
-    // function onDocumentMouseDown(e: Event) {
-    //   console.log({ mouseDown: e });
-    // }
+    function onDocumentMouseDown(e: Event) {
+      e.preventDefault();
+
+      const vector = new Vector3(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -(e.clientY / window.innerHeight) * 2 + 1,
+        0.5
+      );
+
+      const { x, y } = vector;
+      console.log({ x, y });
+    }
+
     //
     // function onDocumentMouseUp(e: Event) {
     //   console.log({ mouseUp: e });
@@ -49,7 +62,7 @@ export const Viewer = ({ title, modelUrl }: ViewerProps) => {
 
       // PLANE
       const groundMaterial = new TextureLoader().load('/src/assets/textures/ground-material.png');
-      const geometry = new PlaneGeometry(10, 10);
+      const geometry = new PlaneGeometry(3, 3);
       geometry.rotateX(Math.PI / 2);
       geometry.rotateY(Math.PI / 2);
       const material = new MeshStandardMaterial({ map: groundMaterial, side: DoubleSide });
@@ -60,14 +73,14 @@ export const Viewer = ({ title, modelUrl }: ViewerProps) => {
       // LOAD OBJECT
       let loader = new GLTFLoader();
       const gltf = await loader.loadAsync(modelUrl);
-      setModel(gltf.scene.children[0]);
+      setModel(gltf.scene.children[0].rotateZ(180 / 180 * Math.PI));
       scene().add(gltf.scene);
 
       // RENDERER
       renderer().setSize(parent.innerWidth, parent.innerHeight);
 
       // LIGHTS
-      const ambientLight = new AmbientLight(0x404040, 3);
+      const ambientLight = new AmbientLight(0x404040, 0);
       scene().add(ambientLight);
 
       const directionalLight = new DirectionalLight(0xffffff, 5);
@@ -75,10 +88,15 @@ export const Viewer = ({ title, modelUrl }: ViewerProps) => {
       directionalLight.castShadow = false;
       scene().add(directionalLight);
 
-      const light = new PointLight(0xc4c4c4, 1);
+      const light = new PointLight(0xc4c4c4, 0);
       light.position.set(300, 200, 300);
       light.castShadow = true;
       scene().add(light);
+
+      const light2 = new PointLight(0xc4c4c4, 3);
+      light2.position.set(500, 500, 0);
+      light2.castShadow = true;
+      scene().add(light2);
 
       //CAMERA
       // camera().rotation.y = 45 / 180 * Math.PI;
@@ -96,7 +114,7 @@ export const Viewer = ({ title, modelUrl }: ViewerProps) => {
         console.log({ post: camera().position });
       });
 
-      // document.addEventListener('mousedown', onDocumentMouseDown, false);
+      document.addEventListener('mousedown', onDocumentMouseDown, false);
       // document.addEventListener('mousemove', onDocumentMouseMove, false);
       // document.addEventListener('mouseup', onDocumentMouseUp, false);
 
